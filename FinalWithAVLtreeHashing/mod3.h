@@ -1,72 +1,99 @@
-#include "module2.h"
+#include "mod2.h" // Include custom module with expense-related definitions
+// ==================== HASH TABLE IMPLEMENTATION ====================
+#define HASH_SIZE 100
 
-// Merge function for Merge Sort
-// Sorts by category (type = 1), amount (type = 2), or date (type = 3)
-void merge(Expense *EX[], int left, int mid, int right, int type)
+typedef struct HashTable
 {
-    int n1 = mid - left + 1;
-    int n2 = right - mid;
+    Expense *buckets[HASH_SIZE];
+    int size;
+} HashTable;
 
-    // Temporary arrays
-    Expense *L[n1], *R[n2];
+// Global variable;
+HashTable *expense_hash = NULL;
 
-    // Copy data to temp arrays
-    for (int i = 0; i < n1; i++)
-        L[i] = EX[left + i];
-    for (int j = 0; j < n2; j++)
-        R[j] = EX[mid + 1 + j];
-
-    int i = 0, j = 0, k = left;
-
-    // Merge sorted subarrays based on selected type
-    if (type == 1) // Sort by category (lexical order)
-        while (i < n1 && j < n2)
-            EX[k++] = (strcmp(L[i]->category, R[j]->category) <= 0) ? L[i++] : R[j++];
-    if (type == 2) // Sort by amount (ascending)
-        while (i < n1 && j < n2)
-            EX[k++] = (L[i]->amount <= R[j]->amount) ? L[i++] : R[j++];
-    if (type == 3) // Sort by date (oldest to newest)
-        while (i < n1 && j < n2)
-            EX[k++] = (L[i]->date <= R[j]->date) ? L[i++] : R[j++];
-
-    // Copy remaining elements
-    while (i < n1)
-        EX[k++] = L[i++];
-    while (j < n2)
-        EX[k++] = R[j++];
+// Hash function for expense categories
+unsigned int hash_function(const char *key)
+{
+    unsigned int hash = 0;
+    for (int i = 0; key[i] != '\0'; i++)
+    {
+        hash = 31 * hash + key[i]; // compiler optimize it as hash = (hash >> 5) - hash + key[i];
+    }
+    return hash % HASH_SIZE;
 }
 
-// Recursive Merge Sort function
-void mergeSort(Expense *EX[], int left, int right, int type)
+// Initialize hash table
+HashTable *create_hash_table()
 {
-    if (left < right)
+    HashTable *ht = (HashTable *)malloc(sizeof(HashTable));
+    for (int i = 0; i < HASH_SIZE; i++)
     {
-        int mid = left + (right - left) / 2;
-
-        // Recursively sort the halves
-        mergeSort(EX, left, mid, type);
-        mergeSort(EX, mid + 1, right, type);
-
-        // Merge sorted halves
-        merge(EX, left, mid, right, type);
+        ht->buckets[i] = NULL;
     }
+    ht->size = 0;
+    return ht;
 }
 
-// Wrapper to sort all 3 sorted arrays (by category, amount, date)
-void mergeSortEx()
+// Insert expense into hash table (by category)
+void hash_insert(HashTable *ht, Expense *expense)
 {
-    // Initialize sorted arrays with pointers to original expenses
-    for (int i = 0; i < maxID; i++)
-    {
-        sortedCategory[i] = &ex[i];
-        sortedAmount[i] = &ex[i];
-        sortedDate[i] = &ex[i];
-    }
+    unsigned int index = hash_function(expense->category);
 
-    // Sort them using merge sort
-    mergeSort(sortedCategory, 0, maxID - 1, 1);
-    mergeSort(sortedAmount, 0, maxID - 1, 2);
-    mergeSort(sortedDate, 0, maxID - 1, 3);
+    // Create newNode expense node
+    Expense *new_expense = (Expense *)malloc(sizeof(Expense));
+    *new_expense = *expense;                // creating copy by value
+    new_expense->next = ht->buckets[index]; // insertion at head in chain list
+    ht->buckets[index] = new_expense;
+    ht->size++;
+}
+
+// Search expenses by category
+void hash_search_by_category(HashTable *ht, const char *category)
+{
+    unsigned int index = hash_function(category);
+    Expense *current = ht->buckets[index];
+    double total = 0;
+    int count = 0;
+
+    printf("\n=== Expenses in category: %s ===\n", category);
+    while (current != NULL)
+    {
+        if (strcmp(current->category, category) == 0)
+        {
+
+            displayOneExpense(current);
+            total += current->amount;
+            count++;
+        }
+        current = current->next;
+    }
+    printf("Total expenses in %s: $%.2f (%d items)\n", category, total, count);
+}
+
+// Free hash table memory
+void free_hash_table(HashTable *ht)
+{
+    for (int i = 0; i < HASH_SIZE; i++)
+    {
+        Expense *current = ht->buckets[i];
+        while (current != NULL)
+        {
+            Expense *temp = current;
+            current = current->next;
+            free(temp);
+        }
+    }
+    free(ht);
+}
+
+void insert(double amount, time_t date, char *category, char *description)
+{
+    Expense *newNode = createExpense(amount, date, category, description);
+    appendExpense(newNode);
+    hash_insert(expense_hash, newNode);
+    AmountSorted = insertAVL(AmountSorted, newNode, 1);
+    DateSorted = insertAVL(DateSorted, newNode, 2);
+    CategorySorted = insertAVL(CategorySorted, newNode, 3);
 }
 
 // Displays current financial status
@@ -107,7 +134,8 @@ time_t getDatefromUser()
     do
     {
         printf("Enter due Month [between %d to %d]: ", incomeDate.tm_mon + 1, incomeDate.tm_mon + 2);
-        while (!validateIntInput(&month));
+        while (!validateIntInput(&month))
+            ;
     } while (month < incomeDate.tm_mon + 1 || month > incomeDate.tm_mon + 2);
 
     // Prompt user for valid day
@@ -116,7 +144,8 @@ time_t getDatefromUser()
         do
         {
             printf("Enter due Day [between %d to %d]: ", incomeDate.tm_mday, maxDaysInCurrentMonth);
-            while (!validateIntInput(&day));
+            while (!validateIntInput(&day))
+                ;
         } while (day < incomeDate.tm_mday || day > maxDaysInCurrentMonth);
     }
     else
@@ -124,7 +153,8 @@ time_t getDatefromUser()
         do
         {
             printf("Enter due Day [between 1 to %d]: ", maxDaysInNextMonth);
-            while (!validateIntInput(&day));
+            while (!validateIntInput(&day))
+                ;
         } while (day < 1 || day > maxDaysInNextMonth);
     }
 
@@ -138,23 +168,29 @@ void createPlan()
 {
     clear();
     double amount, p1 = 15, p2 = 65, p3 = 20;
-    char type[TypeSize], desc[DescSize];
+    char type[CAT_SIZE], desc[DESC_SIZE];
     time_t now = time(NULL);
     struct tm *local = localtime(&now), date;
     int days = getDaysInMonth(local->tm_year + 1900, local->tm_mon + 1);
     int day, option;
+    expense_hash = create_hash_table();
 
     printf("\n**************************************** Creating A New Budget Plan **********************************************");
 
     // Prompt user for monthly income
     printf("\nPlease enter your monthly income: ");
-    do{while (!validateDoubleInput(&income));}while(income<=0);
+    do
+    {
+        while (!validateDoubleInput(&income))
+            ;
+    } while (income <= 0);
 
     // Ask user for income day
     do
     {
         printf("What day of the month do you receive your income[between 1 to %d]: ", days);
-        while (!validateIntInput(&day));
+        while (!validateIntInput(&day))
+            ;
     } while (day < 1 || day > days);
 
     // Save income date
@@ -175,13 +211,15 @@ void createPlan()
         do
         {
             printf("Enter a valid percentage value for emergency savings[0 - 100]: ");
-            while (!validateDoubleInput(&p1));
+            while (!validateDoubleInput(&p1))
+                ;
         } while (p1 > 100 || p1 < 0);
 
         do
         {
             printf("Enter a valid percentage for main expenses[0 - %.2lf]: ", 100 - p1);
-            while (!validateDoubleInput(&p2));
+            while (!validateDoubleInput(&p2))
+                ;
         } while (p2 > 100 - p1 || p2 < 0);
 
         p3 = 100 - p1 - p2;
@@ -207,24 +245,25 @@ void createPlan()
         updateStatus();
         printf("\n*********************************** Fixed main Expenses[eg.Bills & EMI & Rent] *********************************");
 
-        clear_input_buffer(); // <-- ADD THIS to fix the skipping
         // Prompt for type
         printf("\nEnter the type of expense[eg.Water bill,EMI,Netflix]: ");
-        do {
-            fgets(type, sizeof(type), stdin); 
-            clear_input_buffer(); // <-- ADD THIS to fix the skipping  
+        do
+        {
+            fgets(type, sizeof(type), stdin);
         } while (!isNotOnlySpace(type));
         toFirstCap(type);
 
         // Prompt for amount
-        do {
+        do
+        {
             printf("Enter the amount [Greater 0 and less than equal to %.2lf]: ", balance);
-            while (!validateDoubleInput(&amount));
+            while (!validateDoubleInput(&amount))
+                ;
         } while (amount <= 0 || amount > balance);
 
         balance -= amount;
         fixedDue += amount;
-        addExpense(amount, type, "Fixed bills", getDatefromUser());
+        insert(amount, getDatefromUser(), type, "Fixed bills");
         printf("Expense Added Successfully!\n");
 
         // Ask if more bills need to be added
@@ -246,33 +285,39 @@ void createPlan()
 
             // Expense type
             printf("\nEnter the type of expense[eg.Food,Cloth,Fuel]: ");
-            do {
+            do
+            {
                 fgets(type, sizeof(type), stdin);
             } while (!isNotOnlySpace(type));
             toFirstCap(type);
 
             // Expense amount
-            do {
+            do
+            {
                 printf("Enter the amount [Greater 0 and less than equal to %.2lf]: ", balance);
-                while (!validateDoubleInput(&amount));
+                while (!validateDoubleInput(&amount))
+                    ;
             } while (amount <= 0 || amount > balance);
 
             // Description
             printf("\nEnter description of expense: ");
-            do {
+            do
+            {
                 fgets(desc, sizeof(desc), stdin);
             } while (!isNotOnlySpace(desc));
             toFirstCap(desc);
 
             // Expense date
-            do {
+            do
+            {
                 printf("Enter expense day [between %d to %d]: ", incomeDate.tm_mday, local->tm_mday);
-                while (!validateIntInput(&day));
+                while (!validateIntInput(&day))
+                    ;
             } while (day < incomeDate.tm_mday || day > local->tm_mday);
 
             balance -= amount;
             date = getDatefromDay(day, local->tm_mon + 1);
-            addExpense(amount, type, desc, mktime(&date));
+            insert(amount, mktime(&date), type, desc);
             printf("Expense Added Successfully!\n");
 
             // Add more?

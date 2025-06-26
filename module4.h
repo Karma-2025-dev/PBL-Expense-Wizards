@@ -5,13 +5,15 @@
 void UI()
 {
     // Set locale for proper character formatting
-    setlocale(LC_ALL, "en_US.UTF-8");
+    // setlocale(LC_ALL, "en_US.UTF-8");
 
     // Print stylized welcome message
     printf("\n");
     printf("=======================================================================================\n");
     printf("|                                                                                      |\n");
     printf("|                                      Welcome to                                      |\n");
+    if(setlocale(LC_ALL, "en_US.UTF-8"))
+    {
     printf("|                                                                                      |\n");
     printf("|                       ████████╗██████╗  █████╗  ██████╗██╗  ██╗                      |\n");
     printf("|                       ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝                      |\n");
@@ -32,12 +34,14 @@ void UI()
     printf("|                       ███████║██║     ███████╗██║ ╚████║██████╔╝                     |\n");
     printf("|                       ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═══╝╚═════╝                      |\n");
     printf("|                                                                                      |\n");
+    }
     printf("|                      Your personal companion for expense tracking                    |\n");
     printf("|                                                                                      |\n");
     printf("=======================================================================================\n");
     printf("\n");
     printf("Press enter to continue: ");
     getchar(); // Wait for user input to proceed
+    clear_input_buffer(); // <-- ADD THIS to fix the skipping
 }
 
 // Resets all stored data and starts a new financial plan
