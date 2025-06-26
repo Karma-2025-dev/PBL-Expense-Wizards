@@ -232,7 +232,11 @@ void menu()
             if (manual)
                 if (saveExpensesToFile("expenses.dat"))
                     printf("Data saved successfully!\n");
-
+            freeExpenses(Start);
+            free_hash_table(expense_hash);
+            deleteAVLTree(AmountSorted);
+            deleteAVLTree(DateSorted);
+            deleteAVLTree(CategorySorted);
             printf("Exiting the program. Goodbye!\n");
             break;
 
